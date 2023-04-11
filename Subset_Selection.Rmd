@@ -1,0 +1,22 @@
+---
+title: "Best_Subset_Selection"
+output: html_document
+date: "2023-04-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+songs <- read.csv("C:/Users/vikto/OneDrive/Dokumenter/Semester6/StatLearn/Spotify_Youtube.csv")
+songs <- songs[, -c(1,2,3,4,5,7,10,19,20,21,22,23,24,25,26,27)]
+summary(songs)
+library(GGally)
+ggpairs(songs)
+
+model <- lm(Stream ~ ., data = songs)
+summary (model)
+anova(model)
+```
