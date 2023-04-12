@@ -6,10 +6,14 @@ date: "2023-04-12"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(GGally)
 ```
 
 
 ```{r}
-
+d.heart <- read.csv("C:/Users/vikto/OneDrive/Dokumenter/Semester6/StatLearn/tmt4268_Assignment/heart.csv")
+summary(d.heart)
+ggpairs(d.heart)
 ```
 
