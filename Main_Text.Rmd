@@ -28,6 +28,9 @@ knitr::opts_chunk$set(echo = TRUE,tidy=TRUE,message=FALSE,warning=FALSE,strip.wh
 ```{r,eval=TRUE,echo=FALSE}
 library("knitr")
 library("rmarkdown")
+library(GGally)
+library(caret)
+library(pROC)
 ```
 
 <!--  Etc (load all packages needed). -->
@@ -41,6 +44,15 @@ library("rmarkdown")
 
 ## Descriptive data analysis/statistics
 
+```{r}
+d.heart <- read.csv("heart.csv")
+
+summary(d.heart)
+```
+
+```{r}
+ggpairs(d.heart)
+```
 
 ## Methods
 
