@@ -43,6 +43,8 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
                                          reference=as.factor(test$HeartDisease), 
                                          positive = '1')
 
+??confusionMatrix
+
 print(logRegConfusionMatrix$table)
 
 print(logRegConfusionMatrix$byClass)
