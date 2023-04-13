@@ -5,7 +5,7 @@ date: "2023-04-12"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
 rm(list=ls())
 set.seed(25)
 library(GGally)
@@ -15,12 +15,14 @@ library(pROC)
 
 
 ```{r}
-d.heart <- read.csv("C:/Users/vikto/OneDrive/Dokumenter/Semester6/StatLearn/tmt4268_Assignment/heart.csv")
+d.heart <- read.csv("heart.csv")
 
 summary(d.heart)
 ggpairs(d.heart)
+```
 
-training_set_size <- floor(0.9 * nrow(d.heart))
+```{r}
+training_set_size <- floor(0.8 * nrow(d.heart))
 train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
 train <- d.heart[train_ind, ]
 test <- d.heart[-train_ind, ]
@@ -43,11 +45,26 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
 
 print(logRegConfusionMatrix$table)
 
-print(logRegConfusionMatrix$byClass
-      )
+print(logRegConfusionMatrix$byClass)
 
 logRegROC=roc(test$HeartDisease, logRegPredictionClassified)
 
 plot(logRegROC,main="ROC curve -- Logistic Regression")
 
+logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) #0.2 gir sens: 0.96, spec:0.61
+#kanskje bruke cv for tuning? 
+
+logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
+                                         reference=as.factor(test$HeartDisease), 
+                                         positive = '1')
+
+print(logRegConfusionMatrix$byClass)
+
+logRegROC=roc(test$HeartDisease, logRegPredictionClassified)
+plot(logRegROC,main="ROC curve -- Logistic Regression")
+
+```
+
+```{r}
+logRegModel$coefficients
 ```
