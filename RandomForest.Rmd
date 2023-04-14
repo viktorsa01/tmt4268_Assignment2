@@ -6,41 +6,68 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+rm(list=ls())
+set.seed(25)
+library(GGally)
+library(randomForest)
+library(caret)
+library(ggplot2)
 ```
 
-Import dataset and remove irrelevant datapoints:
+
 ```{r}
-songs <- read.csv("Spotify_Youtube.csv")
-songs <- songs[, -c(1,2,3,4,5,7,10,19,20,21,22,23,24,25,26,27)]
-songs <- na.omit(songs)
-summary(songs)
-head(songs)
-str(songs)
-library(GGally)
-#ggpairs(songs)
+d.heart <- read.csv("heart.csv")
+
+str(d.heart)
+
+head(d.heart)
 ```
+
+Change datatype of response variable "HeartDisease" to factor, and make it more readable:
+```{r}
+d.heart$HeartDisease <- ifelse(d.heart$HeartDisease == 1, yes="Y", no="N")
+
+d.heart$HeartDisease <- as.factor(d.heart$HeartDisease)
+
+str(d.heart)
+```
+
+```{r}
+table(d.heart$HeartDisease)
+summary(d.heart)
+ggpairs(d.heart)
+```
+
 Split into training and test set:
 ```{r}
-set.seed(25)
-
-train_size <- floor(0.9 * nrow(songs))
-train_ind <- sample(seq_len(nrow(songs)), size = train_size)
-
-train <- songs[train_ind, ]
-test <- songs[-train_ind, ]
+training_set_size <- floor(0.8 * nrow(d.heart))
+train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
+train <- d.heart[train_ind, ]
+test <- d.heart[-train_ind, ]
 ```
-
 
 Random forest:
 ```{r}
-library(randomForest)
-
-model <- randomForest(Stream ~ ., data = train, proximity = TRUE)
+model <- randomForest(HeartDisease ~ ., data = train, proximity = TRUE)
 
 model
 
 prediction <- predict(model, test)
-
-plot(c(1,2,3,4,5,6), head(prediction)) + plot(c(1,2,3,4,5,6), head(test$Stream))
 ```
+
+Assess prediction:
+```{r}
+confusionMatrix <- confusionMatrix(data = prediction, reference = test$HeartDisease)
+confusionMatrix
+```
+
+Now we fiddle with the parameters of the model to see if it yields a better model. First we investigate the number of trees in the forest. The number of trees is not a tuning parameter, the question is just whether we have enough trees for optimal classification, and of course we want as few trees as possible within this range to keep the complexity down. 
+```{r}
+plot(model$err.rate[,1], type="l", ylim = c(0.08, 0.22), ylab="Error rates", xlab = "Number of trees", col="blue")
+lines(model$err.rate[,2], col="red")
+lines(model$err.rate[,3], col="green")
+legend(225, 0.225, legend=c("OOB", "N", "Y"), col=c("blue", "red", "green"), lty=1, cex=0.8)
+```
+
+Observing the plot, it seems like the error rates stabilize at around 100 trees, which means we can save complexity by reducing the number of trees frok 500 to 100 without any loss of precision in the model.
