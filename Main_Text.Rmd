@@ -17,7 +17,7 @@ output:
 urlcolor: blue
 abstract: "This is the place for your abstract (max 350 words)"
 ---
-  
+
 ```{r setup, include=FALSE}
 library(knitr)
 knitr::opts_chunk$set(echo = TRUE,tidy=TRUE,message=FALSE,warning=FALSE,strip.white=TRUE,prompt=FALSE,
@@ -35,29 +35,41 @@ library(pROC)
 
 <!--  Etc (load all packages needed). -->
 
-
-
-
-
 ## Introduction: Scope and purpose of your project
-
 
 ## Descriptive data analysis/statistics
 
+We load in the data set, and change the data type of all categorical variables to factor variables so that r knows the right encoding.
+
 ```{r}
 d.heart <- read.csv("heart.csv")
+d.heart$Sex <- factor(d.heart$Sex)
+d.heart$ChestPainType <- factor(d.heart$ChestPainType)
+d.heart$FastingBS <- factor(d.heart$FastingBS)
+d.heart$RestingECG <- factor(d.heart$RestingECG)
+d.heart$ExerciseAngina <- factor(d.heart$ExerciseAngina)
+d.heart$ST_Slope <- factor(d.heart$ST_Slope)
+d.heart$HeartDisease <- factor(d.heart$HeartDisease)
+```
 
+Then we run the **dim** and **summary** functions to get an overview of the data.
+
+```{r}
+dim (d.heart)
 summary(d.heart)
 ```
+
+We find that the data set contains 918 rows and and 12 columns. The twelve columns are: **Age, Sex, ChestPainType, RestingBP, Cholesterol, FastingBS, RestingECG, MaxHR, ExerciseAngina, Oldpeak, ST_Slope** and **HeartDisease**. ##Tror dette egentlig burde i introduction delen##. From the output of **summary** one can see the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of **Sex** on the target variable. The same goes for **Age** as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77. 
+ 
+To get a better view of the data we use the **ggpairs** function. 
 
 ```{r}
 ggpairs(d.heart)
 ```
+From **figure XXX** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the highest absolute value of 0.382 which is ##Sjekk notater##. 
 
 ## Methods
 
-
 ## Results and interpretation
-
 
 ## Summary
