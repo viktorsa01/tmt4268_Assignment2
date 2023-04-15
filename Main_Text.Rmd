@@ -6,7 +6,8 @@ author:
 - Full name for group member \#3.
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 header-includes: \usepackage{amsmath}
-output: bookdown::html_document2
+output: 
+  bookdown::html_document2
   # html_document:
   #   toc: no
   #   toc_depth: '2'
@@ -63,12 +64,19 @@ We find that the data set contains 918 rows and and 12 columns. The twelve colum
  
 To get a better view of the data we use the **ggpairs** function. 
 
-```{r}
+```{r, fig.cap= "pairplot"}
 ggpairs(heart)
 ```
 From **figure XXX** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of - 0.382 which is indicates a moderate negative correlation between the two variables. 
 
 ## Methods
+
+The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used **mainly/only** for prediction. We want to find out which model performs best, while also gaining some insight into what factors contribute to heart disease. 
+
+The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it tells us the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease predicted to be healthy, while specificity is the portion of healthy people predicted to have heart disease. We will emphasize sensitivity, as false negatives will have larger consequences than false positives in our case. This means we might trade some general performance, for increased sensitivity.    
+
+
+
 
 ## Results and interpretation
 
