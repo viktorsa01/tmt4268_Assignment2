@@ -43,13 +43,12 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
                                          reference=as.factor(test$HeartDisease), 
                                          positive = '1')
 
-??confusionMatrix
 
 print(logRegConfusionMatrix$table)
 
 print(logRegConfusionMatrix$byClass)
 
-logRegROC=roc(test$HeartDisease, logRegPredictionClassified)
+logRegROC=roc(test$HeartDisease, logRegPrediction)
 
 plot(logRegROC,main="ROC curve -- Logistic Regression")
 
@@ -62,8 +61,6 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
 
 print(logRegConfusionMatrix$byClass)
 
-logRegROC=roc(test$HeartDisease, logRegPredictionClassified)
-plot(logRegROC,main="ROC curve -- Logistic Regression")
 
 ```
 
