@@ -29,6 +29,8 @@ test <- d.heart[-train_ind, ]
 
 ```
 
+First we fit the model to the training set, and make predictions on the test set. Then we chose a cutoff of 0,5 for classification and make the corresponding confusion matrix. 
+
 ```{r}
 
 logRegModel <- glm(HeartDisease ~ . - HeartDisease, data = train, family = "binomial")
@@ -37,21 +39,28 @@ logRegPrediction <- predict(logRegModel, test, type="response")
 
 logRegPredictionClassified <- ifelse(logRegPrediction > 0.5, 1, 0)
 
-table(logRegPredictionClassified)
-
 logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
                                          reference=as.factor(test$HeartDisease), 
                                          positive = '1')
 
+print(logRegConfusionMatrix)
 
-print(logRegConfusionMatrix$table)
+```
 
-print(logRegConfusionMatrix$byClass)
+We get a misclassification error of $1 - 0.8641 = 0.1359$, sensitivity of $0.8791$ and specificity$0.8495$. As a rule of thumb the sum of specificity and sensitivity should be at least $1.5$, which means our model is performing quite well. 
+
+To get a better idea of what cutoff to chose we plot the ROC curve.
+
+```{r}
 
 logRegROC=roc(test$HeartDisease, logRegPrediction)
 
 plot(logRegROC,main="ROC curve -- Logistic Regression")
+```
 
+
+
+```{r}
 logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) #0.2 gir sens: 0.96, spec:0.61
 #kanskje bruke cv for tuning? 
 
@@ -60,7 +69,6 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
                                          positive = '1')
 
 print(logRegConfusionMatrix$byClass)
-
 
 ```
 

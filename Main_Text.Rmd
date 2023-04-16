@@ -38,6 +38,8 @@ library(pROC)
 
 ## Introduction: Scope and purpose of your project
 
+
+
 ## Descriptive data analysis/statistics
 
 We load in the data set, and change the data type of all categorical variables to factor variables so that r knows the right encoding.
@@ -78,7 +80,7 @@ The models will be evaluated by misclassification error, while also taking into 
 Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$
 Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$
 The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$
-This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model. Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can be used for inference. Meaning we get insight into what are good indicators of heart disease. Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no to average correlation between the independent variables, which shouldn't be an issue as we have seen from the descriptive analysis section. 
+This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model. Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can therefore be used for inference. . Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no to average correlation between the independent variables, which shouldn't be an issue as we have seen from the descriptive analysis section. 
 ## Results and interpretation
 
 ## Summary
