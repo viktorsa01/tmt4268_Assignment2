@@ -123,3 +123,5 @@ For the sake of experimenting, we also also check the partial dependence on the 
 partialPlot(adjustedModel, train, Age, "Y")
 ````
 Indeed, it seems like the model is more likely to predict heart disease for older people.
+
+Another way to study inference from a random forest is to look at the individual trees in the forest, and see which variables is more often used to split the data. 
