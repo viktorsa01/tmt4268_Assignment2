@@ -29,6 +29,8 @@ test <- d.heart[-train_ind, ]
 
 ```
 
+First we fit the model to the training set, and make predictions on the test set. Then we chose a cutoff of 0.5 for classification and make the corresponding confusion matrix. 
+
 ```{r}
 
 logRegModel <- glm(HeartDisease ~ . - HeartDisease, data = train, family = "binomial")
@@ -37,22 +39,26 @@ logRegPrediction <- predict(logRegModel, test, type="response")
 
 logRegPredictionClassified <- ifelse(logRegPrediction > 0.5, 1, 0)
 
-table(logRegPredictionClassified)
-
 logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
                                          reference=as.factor(test$HeartDisease), 
                                          positive = '1')
 
-??confusionMatrix
+print(logRegConfusionMatrix)
 
-print(logRegConfusionMatrix$table)
+```
 
-print(logRegConfusionMatrix$byClass)
+We get a misclassification error of $1 - 0.8641 = 0.1359$, sensitivity of $0.8791$ and specificity$0.8495$. As a rule of thumb the sum of specificity and sensitivity should be at least $1.5$, which means our model is performing quite well, though we might want to increase the sensitivity of the model. To get a better idea of what cutoff to chose we plot the ROC curve.
 
-logRegROC=roc(test$HeartDisease, logRegPredictionClassified)
+```{r}
+
+logRegROC=roc(test$HeartDisease, logRegPrediction)
 
 plot(logRegROC,main="ROC curve -- Logistic Regression")
+```
 
+From the ROC curve we find that 0.5 seems to work well as a cutoff, but we might be able to increase the sensitivity without drastically decreasing performance. Therefore we try a cutoff of 0.3. 
+
+```{r}
 logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) #0.2 gir sens: 0.96, spec:0.61
 #kanskje bruke cv for tuning? 
 
@@ -60,13 +66,13 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
                                          reference=as.factor(test$HeartDisease), 
                                          positive = '1')
 
-print(logRegConfusionMatrix$byClass)
-
-logRegROC=roc(test$HeartDisease, logRegPredictionClassified)
-plot(logRegROC,main="ROC curve -- Logistic Regression")
+print(logRegConfusionMatrix)
 
 ```
+
+We get misclassification error of $0.1739$, a sensitivity of $0.919$ and specificity of $0.718$. Which we find to be a better result than the 0.5 cutoff, due to the increase in sensitivity while slightly increasing the misclassification error. From the ROC curve we find that further increases in sensitivity will give diminishing returns while lowering the general performance.   
 
 ```{r}
 logRegModel$coefficients
 ```
+
