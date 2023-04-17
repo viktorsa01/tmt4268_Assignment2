@@ -13,35 +13,30 @@ library(GGally)
 library(randomForest)
 library(caret)
 library(ggplot2)
+library(pROC)
 ```
 
+We implement a random forest model t
 
+Import dataset:
 ```{r}
 d.heart <- read.csv("heart.csv")
-
-str(d.heart)
-
-head(d.heart)
 ```
 
-Change datatype of response variable "HeartDisease" to factor, and make it more readable. Also transform character variables to factor variables.
+Change datatype of response variable "HeartDisease" to factor. Also transform all character variables to factor variables.
 ```{r}
-d.heart$HeartDisease <- ifelse(d.heart$HeartDisease == 1, yes="Y", no="N")
-
 d.heart$HeartDisease <- as.factor(d.heart$HeartDisease)
 d.heart$Sex <- as.factor(d.heart$Sex)
 d.heart$ChestPainType <- as.factor(d.heart$ChestPainType)
 d.heart$RestingECG <- as.factor(d.heart$RestingECG)
 d.heart$ExerciseAngina <- as.factor(d.heart$ExerciseAngina)
 d.heart$ST_Slope <- as.factor(d.heart$ST_Slope)
-
-str(d.heart)
+d.heart$FastingBS <- as.factor(d.heart$FastingBS)
 ```
-See hoe the responsevariable is distributed in the data:
+See how the response variable is distributed in the data:
 ```{r}
 table(d.heart$HeartDisease)
 ```
-
 Split into training and test set:
 ```{r}
 training_set_size <- floor(0.8 * nrow(d.heart))
@@ -49,79 +44,59 @@ train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
 train <- d.heart[train_ind, ]
 test <- d.heart[-train_ind, ]
 ```
-
-Random forest:
+Create a random forest model using the $\texttt{randomForest()}$ function from the **randomForest** library:
 ```{r}
 model <- randomForest(HeartDisease ~ ., data = train, importance = TRUE)
 
 model
 ```
-Predict on test set:
+Perform prediction on unseen test data, and assess the prediction through a confusion matrix:
 ```{r}
 prediction <- predict(model, test)
-```
-
-Assess prediction:
-```{r}
 confusionMatrix <- confusionMatrix(data = prediction, reference = test$HeartDisease)
-confusionMatrix
+confusionMatrix$overall
 ```
-
 Now we fiddle with the parameters of the model to see if it yields a better model. 
 
-First we investigate the number of trees in the forest. The number of trees is not a tuning parameter, the question is just whether we have enough trees for optimal classification, and of course we want as few trees as possible within this range to keep the complexity down. 
+First we investigate the number of trees in the forest. The number of trees is not a tuning parameter, the question is just whether we have enough trees for optimal classification, and of course we want as few trees as possible within this range to keep the complexity down. We plot the error rates for the positive, negative and Out-of-bag observations as functions of number of trees:
 ```{r}
 plot(model$err.rate[,1], type="l", ylim = c(0.08, 0.22), ylab="Error rates", xlab = "Number of trees", col="blue")
 lines(model$err.rate[,2], col="red")
 lines(model$err.rate[,3], col="green")
-legend(225, 0.225, legend=c("OOB", "N", "Y"), col=c("blue", "red", "green"), lty=1, cex=0.8)
+legend(225, 0.225, legend=c("OOB", "Negatives", "Positives"), col=c("blue", "red", "green"), lty=1, cex=0.8)
 ```
+The most interesting error is the OOB error, since this is the error rate measured on unseen data, and hence is a valid estimate of the test error. Observing the plot, it seems like all the error rates stabilize at around 100 trees, which means we can reduce complexity by reducing the number of trees from 500 to 100 without any loss of precision in the model. 
 
-Observing the plot, it seems like the error rates stabilize at around 100 trees, which means we can save complexity by reducing the number of trees frok 500 to 100 without any loss of precision in the model.
-
-We create a new forest with 100 trees to confirm that the resulting prediction is just as good as with 500 trees:
-```{r}
-adjustedModel <- randomForest(HeartDisease ~ ., data = train, ntree=100, importance = TRUE)
-
-adjustedModel
-
-adjustedPrediction <- predict(adjustedModel, test)
-
-confusionMatrix2 <- confusionMatrix(data = adjustedPrediction, reference = test$HeartDisease)
-confusionMatrix2
-```
-
-Now we investigate whether we consider the optimal number of variables in each split in the trees. The default value used in the previous models is 3, which corresponds to the floored square root of the number of predictors. To find the optimal value, we test all possible number of predictors, which in our case is 1 through 11. In each iteration, we store the OOB error rate at the final iteration, that is when the forest is made up of all 100 trees.
+Furthermore, we investigate the number of variables considered in each split in the trees. The default value in the $\texttt{randomForest()}$ function for classification problems corresponds to the floored square root of the number of predictors, in our case 3. The number of predictors considered can be seen as a tuning parameter, since we on one hand want to decorrelate the trees by allowing only a subset of the predictors to be considered, while we on the other hand need enough predictors to split the data properly. To find the optimal value, we test all possible number of predictors, i.e. 1 through 11. In each iteration, we store the OOB error rate at the final iteration. 
 ```{r}
 oobValues = vector(length=11)
-
-
 for(i in 1:11) {
-  newModel <- randomForest(HeartDisease ~ ., data = train, mtry=i, ntree=100, proximity = TRUE)
+  newModel <- randomForest(HeartDisease ~ ., data = train, mtry=i, proximity = TRUE)
   oobValues[i] <- newModel$err.rate[nrow(newModel$err.rate), 1]
 }
 plot(oobValues, type = "o", xlab="Number of predictors considered", ylab="OOB error")
 ```
-Observing the plot, the OOB error does vary depending on the number of predictors that are considered in each tree split. However, running the experiment multiple times shows that there is no unique optimal value, since the optimal value changes every iteration. Hence, we just stick with the default value of $\texttt{mtry}=\lfloor\sqrt{p}\rfloor=3$, where $p$ is the number of predictors.
+Observing the plot, the OOB error does vary depending on the number of predictors that are considered in each tree split. However, running the experiment multiple times shows that there is no unique optimal value, since the optimal value changes every iteration. It does seem like the model does not require many predictors to keep the OOB error down, so we can set the $\texttt{mtry}$ parameter to 1 or 2 to keep the complexity down.  
 
-In addition to creating a predictive model, we want the model to say something about the relation between the response and the different covariates. The $\texttt{randomForest()}$ library has a built in function that approximates how separate predictors affects the accuracy of the model and the impurity of the roots in the trees of the model.
+We create a new model with adjusted hyperparameters. We use $\texttt{ntree}=100$ and $\texttt{mtry}=1$.
+```{r}
+adjustedModel <- randomForest(HeartDisease ~ ., data = train, mtry = 1, ntree=100, importance = TRUE)
+
+adjustedPrediction <- predict(adjustedModel, test)
+
+confusionMatrix2 <- confusionMatrix(data = adjustedPrediction, reference = test$HeartDisease)
+confusionMatrix2$overall
+```
+The accuracy of the model is 8.48. Another measure of the quality of the model is the AUC score, which we measure with the $\texttt{roc()}$ function from the **pRoc** library. 
+```{r}
+probabilityPrediction <- predict(adjustedModel, test, type="prob")
+ROC <- roc(test$HeartDisease, probabilityPrediction[,2])
+ROC$auc
+```
+The model yields an AUC score of more than 0.9, which is good in almost all cases. 
+
+In addition to creating a predictive model, we want the model to say something about the relation between the response and the different covariates, i.e. inference. We use the $\texttt{varImpPlot()}$ function from the **randomForest** library, which approximates how separate predictors affects the accuracy of the model and the impurity of the root nodes in the trees of the model (measured by the Gini index).
 ```{r}
 varImpPlot(adjustedModel)
 ```
-Examining the plots, it seems like the **ST_Slope** and **ChestPainType** variables is most important for creating a good model, indicating that they have a strong correlation with the response variable. We can make examine their importance further by using the $\texttt{partialPlot()}$ function, which gives a graphical depiction of the marginal effect a variable has on the class probability. 
-```{r}
-partialPlot(adjustedModel, train, ST_Slope, "Y")
-```
-It seems like the if the **ST_Slope** variable is either _Down_ or _Flat_, the model is more likely to predict that the patient does have heart disease, while if the **ST_Slope** value is _Down_, the model is more likely to predict no heart disease. 
-```{r}
-partialPlot(adjustedModel, train, ChestPainType, "Y")
-```
-For the **ChestPainType** variable, the model is more likely to predict heart disease if a sample has _ASY_ or _TA_ as value, while it is less likely if the value is _ATA_ or _NAP_.
-
-For the sake of experimenting, we also also check the partial dependence on the **Age** variable, which we have a better intuitive understanding of. Based on our own experience and knowledge, it is reasonable to assume that higher age should correspond to higher risk of heart disease, and we can use this knowledge to check whether the model does actually yield a logical relationship between the response and the predictors.
-```{r}
-partialPlot(adjustedModel, train, Age, "Y")
-````
-Indeed, it seems like the model is more likely to predict heart disease for older people.
-
-Another way to study inference from a random forest is to look at the individual trees in the forest, and see which variables is more often used to split the data. 
+Examining the plots, it seems like the **ST_Slope** and **ChestPainType** variables is most important for creating a good model, indicating that they have a strong correlation with the response variable. This is in agreement with the other models we have implemented. **(????)**
