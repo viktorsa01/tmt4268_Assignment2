@@ -76,8 +76,6 @@ We get misclassification error of $0.163$, a sensitivity of $0.939$ and specific
 ```{r}
 logRegModel$coefficients
 ```
-From the logistic regression model we have that: $$\frac{p_i}{1-p_i} = e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}$$
-$\frac{p_i}{1-p_i}$ is known as odds, and represents the ratio of a person getting heart disease and not getting heart disease. From the formula we can see that increasing $x_i$ by $1$, increases the odds by $e^{\beta_i}$. Therefore we get a picture of the impact of each variable on the response by looking coefficients, taking into account the scale of the corresponding variables. 
 
 From the coefficients we find that **ST_Slope** and **ChestPainType** have the largest impact on the odds of heart disease. In particular people with a flat slope or asymptomatic chest pains have higher chances of heart disease. Otherwise we find that **SexM, FastingBS, ExerciseAnginaY** and **Oldpeak** all increase the odds, while **Cholesterol** decreases them slightly.
 
