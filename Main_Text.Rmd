@@ -38,9 +38,11 @@ library(pROC)
 
 ## Introduction: Scope and purpose of your project
 
+
+
 ## Descriptive data analysis/statistics
 
-We load in the data set, and change the data type of all categorical variables to factor variables so that r knows the right encoding.
+We start by loading the data set, and changing the data type of all categorical variables to factor variables so that r knows the right encoding. Then we divide the data into a training and a test set, by a 80/20 split. 
 
 ```{r}
 heart <- read.csv("heart.csv")
@@ -51,6 +53,11 @@ heart$RestingECG <- factor(heart$RestingECG)
 heart$ExerciseAngina <- factor(heart$ExerciseAngina)
 heart$ST_Slope <- factor(heart$ST_Slope)
 heart$HeartDisease <- factor(heart$HeartDisease)
+
+training_set_size <- floor(0.8 * nrow(d.heart))
+train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
+train <- d.heart[train_ind, ]
+test <- d.heart[-train_ind, ]
 ```
 
 Then we run the **dim** and **summary** functions to get a quick overview of the data.
@@ -71,13 +78,14 @@ From **figure XXX** we can se the distribution of all the variables, and we can 
 
 ## Methods
 
-The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used **mainly/only** for prediction. We want to find out which model performs best, while also gaining some insight into what factors contribute to heart disease. 
+The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used **mainly/only** for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease. 
 
-The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it tells us the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease predicted to be healthy, while specificity is the portion of healthy people predicted to have heart disease. We will emphasize sensitivity, as false negatives will have larger consequences than false positives in our case. This means we might trade some general performance, for increased sensitivity.    
+The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it is the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease correctly classified, while specificity is the portion of healthy people correctly classified. We will emphasize sensitivity, as false negatives will have larger consequences than false positives when trying to detect heart disease. This means we might trade some general performance, for increased sensitivity.   
 
-
-
-
+Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$
+Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$
+The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$
+This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model. Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can therefore be used for inference. . Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no to average correlation between the independent variables, which shouldn't be an issue as we have seen from the descriptive analysis section. 
 ## Results and interpretation
 
 ## Summary
