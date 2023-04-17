@@ -42,7 +42,7 @@ library(pROC)
 
 ## Descriptive data analysis/statistics
 
-We load in the data set, and change the data type of all categorical variables to factor variables so that r knows the right encoding.
+We start by loading the data set, and changing the data type of all categorical variables to factor variables so that r knows the right encoding. Then we divide the data into a training and a test set, by a 80/20 split. 
 
 ```{r}
 heart <- read.csv("heart.csv")
@@ -53,6 +53,11 @@ heart$RestingECG <- factor(heart$RestingECG)
 heart$ExerciseAngina <- factor(heart$ExerciseAngina)
 heart$ST_Slope <- factor(heart$ST_Slope)
 heart$HeartDisease <- factor(heart$HeartDisease)
+
+training_set_size <- floor(0.8 * nrow(d.heart))
+train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
+train <- d.heart[train_ind, ]
+test <- d.heart[-train_ind, ]
 ```
 
 Then we run the **dim** and **summary** functions to get a quick overview of the data.
