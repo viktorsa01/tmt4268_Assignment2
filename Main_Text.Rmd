@@ -54,10 +54,10 @@ heart$ExerciseAngina <- factor(heart$ExerciseAngina)
 heart$ST_Slope <- factor(heart$ST_Slope)
 heart$HeartDisease <- factor(heart$HeartDisease)
 
-training_set_size <- floor(0.8 * nrow(d.heart))
-train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
-train <- d.heart[train_ind, ]
-test <- d.heart[-train_ind, ]
+training_set_size <- floor(0.8 * nrow(heart))
+train_ind <- sample(seq_len(nrow(heart)), size = training_set_size)
+train <- heart[train_ind, ]
+test <- heart[-train_ind, ]
 ```
 
 Then we run the **dim** and **summary** functions to get a quick overview of the data.
@@ -85,7 +85,48 @@ The models will be evaluated by misclassification error, while also taking into 
 Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$
 Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$
 The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$
-This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model. Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can therefore be used for inference. . Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no to average correlation between the independent variables, which shouldn't be an issue as we have seen from the descriptive analysis section. 
+This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model. 
+
+From the logistic regression model we have that: $$\frac{p_i}{1-p_i} = e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}$$
+$\frac{p_i}{1-p_i}$ is known as odds, and represents the ratio of a person getting heart disease and not getting heart disease. From the formula we can see that increasing $x_i$ by $1$, increases the odds by $e^{\beta_i}$. Therefore we get a picture of the impact of each variable on the response by looking coefficients, taking into account the scale of the corresponding variables. 
+
+Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can therefore be used for inference. Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no or at most average correlation between the independent variables, which shouldn't be an issue as we have seen in the descriptive analysis section. 
+
 ## Results and interpretation
+
+After some testing we excluded **RestingECG**, **MaxHR**, **Age**, and **RestingBP** from the analysis due to non-significant p-values when included in a model with all dependent variables. We then fitted the model to the training set and used a $0.5$ classification cutoff to predict the test set, generating a confusion matrix to evaluate performance.
+
+```{r}
+logRegModel <- glm(HeartDisease ~ . - RestingECG - MaxHR - Age - RestingBP, data = train, family = "binomial")
+logRegPrediction <- predict(logRegModel, test, type="response")
+logRegPredictionClassified <- ifelse(logRegPrediction > 0.5, 1, 0)
+logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
+                                         reference=as.factor(test$HeartDisease), 
+                                         positive = '1')
+```
+
+We get a misclassification error of $0.1413$, sensitivity of $0.8899$ and specificity $0.8235$. As a rule of thumb the sum of specificity and sensitivity should be at least $1.5$, which means our model is performing quite well, though we might want to increase the sensitivity of the model. To get a better idea of what cutoff to chose we plot the ROC curve.
+
+```{r}
+logRegROC=roc(test$HeartDisease, logRegPrediction)
+plot(logRegROC,main="ROC curve -- Logistic Regression")
+```
+
+From the ROC curve we find that $0.5$ seems to work well as a cutoff, but we might be able to increase the sensitivity without drastically decreasing performance. Therefore we try a cutoff of $0.3$. 
+
+```{r}
+logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) #0.2 gir sens: 
+logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
+                                         reference=as.factor(test$HeartDisease), 
+                                         positive = '1')
+```
+
+We get misclassification error of $0.163$, a sensitivity of $0.939$ and specificity of $0.718$. Which we find to be a better result than the $0.5$ cutoff, due to the increase in sensitivity while slightly increasing the misclassification error. From the ROC curve we find that further increases in sensitivity will give diminishing returns while lowering the general performance.   
+
+```{r}
+logRegModel$coefficients
+```
+
+From the coefficients we find that **ST_Slope** and **ChestPainType** have the largest impact on the odds of heart disease. In particular people with a flat slope or asymptomatic chest pains have higher chances of heart disease. Otherwise we find that **SexM, FastingBS, ExerciseAnginaY** and **Oldpeak** all increase the odds, while **Cholesterol** decreases them slightly.
 
 ## Summary
