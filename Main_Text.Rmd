@@ -68,18 +68,18 @@ summary(heart)
 
 We find that the data set contains 918 rows and and 12 columns. The twelve columns are: **Age, Sex, ChestPainType, RestingBP, Cholesterol, FastingBS, RestingECG, MaxHR, ExerciseAngina, Oldpeak, ST_Slope** and **HeartDisease**. ##Tror dette egentlig burde i introduction delen##. From the output of **summary** one can see the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of **Sex** on the target variable. The same goes for **Age** as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77.
 
-To get a better view of the data we use the **ggpairs** function.
+To get a better view of the data we use the $\texttt{ggpairs()}$ function.
 
 ```{r, fig.cap= "pairplot"}
 ggpairs(heart, mapping = ggplot2::aes(color = HeartDisease), lower = list(continuous = wrap("points",
     alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.4))) + theme(axis.text = element_text(size = 5))
 ```
 
-From **figure XXX** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of - 0.382 which is indicates a moderate negative correlation between the two variables.
+From **figure 1** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of $-0.382$ which is indicates a moderate negative correlation between the two variables.
 
 ## Methods
 
-The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used **mainly/only** for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease.
+The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used mainly for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease.
 
 The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it is the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease correctly classified, while specificity is the portion of healthy people correctly classified. We will emphasize sensitivity, as false negatives will have larger consequences than false positives when trying to detect heart disease. This means we might trade some general performance, for increased sensitivity.
 
