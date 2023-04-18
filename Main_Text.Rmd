@@ -40,6 +40,34 @@ library(ggplot2)
 
 ## Introduction: Scope and purpose of your project
 
+Cardiovascular disease is the leading cause of death globally, four out of five of which are due to heart failure. Early detection and management is crucial to reduce mortality(2021, fedesoriano). Therefore we want to apply statistical methods to try and make a classification model for predicting heart failure. In addition we would like to gain insight into which factors might indicate a higher risk of heart disease.
+
+We will be using **Heart Failure Prediction Dataset**(2021) by *fedesoriano*. The data set was made by combining five different heart disease data sets, looking at 11 common features. The 11 features of the data set, which we will be using to make our model are: 
+
+1. Age: age of the patient [years]
+
+2. Sex: sex of the patient [M: Male, F: Female]
+
+3. ChestPainType: chest pain type [TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic]
+
+4. RestingBP: resting blood pressure [mm Hg]
+
+5. Cholesterol: serum cholesterol [mm/dl]
+
+6. FastingBS: fasting blood sugar [1: if FastingBS > 120 mg/dl, 0: otherwise]
+
+7. RestingECG: resting electrocardiogram results [Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes' criteria]
+
+8. MaxHR: maximum heart rate achieved [Numeric value between 60 and 202]
+
+9. ExerciseAngina: exercise-induced angina [Y: Yes, N: No]
+
+10. Oldpeak: oldpeak = ST [Numeric value measured in depression]
+
+11. ST_Slope: the slope of the peak exercise ST segment [Up: upsloping, Flat: flat, Down: downsloping]
+
+**Trenger kanskje ikke hele denne tabelen hvis vi får lite plass. Eventuelt kan vi bare nevne alle variabel navnene inline i deskriptiv analyse delen der det står: 11 features mentioned in the introduction, og fjerne tabellen her **
+
 ## Descriptive data analysis/statistics
 
 We start by loading the data set, and changing the data type of all categorical variables to factor variables so that r knows the right encoding. Then we divide the data into a training and a test set, by a 80/20 split.
@@ -67,7 +95,7 @@ dim (heart)
 summary(heart)
 ```
 
-We find that the data set contains 918 rows and and 12 columns. The twelve columns are: **Age, Sex, ChestPainType, RestingBP, Cholesterol, FastingBS, RestingECG, MaxHR, ExerciseAngina, Oldpeak, ST_Slope** and **HeartDisease**. ##Tror dette egentlig burde i introduction delen##. From the output of **summary** one can see the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of **Sex** on the target variable. The same goes for **Age** as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77.
+We find that the data set contains 918 rows and and 12 columns. The twelve columns correspond to the 11 features mentioned in the introduction plus **HeartDisease** indicating whether a person is diagnosed with heart failure or not. From the output of $\texttt{summary()}$ we find the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of **Sex** on the target variable. The same goes for **Age** as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77.
 
 To get a better view of the data we use the $\texttt{ggpairs()}$ function.
 
