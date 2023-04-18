@@ -72,7 +72,6 @@ We find that the data set contains 918 rows and and 12 columns. The twelve colum
 To get a better view of the data we use the $\texttt{ggpairs()}$ function.
 
 ```{r, fig.cap= "pairplot"}
-cor(heart)
 ggpairs(heart, mapping = ggplot2::aes(color = HeartDisease),
   lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.4))) + theme(axis.text = element_text(size = 5))
 ```
