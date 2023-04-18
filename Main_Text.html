@@ -364,6 +364,21 @@ This is the place for your abstract (max 350 words)
 <!--  Etc (load all packages needed). -->
 <div id="introduction-scope-and-purpose-of-your-project" class="section level2" number="0.1">
 <h2><span class="header-section-number">0.1</span> Introduction: Scope and purpose of your project</h2>
+<p>Cardiovascular disease is the leading cause of death globally, four out of five of which are due to heart failure. Early detection and management is crucial to reduce mortality(2021, fedesoriano). Therefore we want to apply statistical methods to try and make a classification model for predicting heart failure. In addition we would like to gain insight into which factors might indicate a higher risk of heart disease.</p>
+<p>We will be using <strong>Heart Failure Prediction Dataset</strong>(2021) by <em>fedesoriano</em>. The data set was made by combining five different heart disease data sets, looking at 11 common features. The 11 features of the data set, which we will be using to make our model are:</p>
+<ol style="list-style-type: decimal">
+<li><p>Age: age of the patient [years]</p></li>
+<li><p>Sex: sex of the patient [M: Male, F: Female]</p></li>
+<li><p>ChestPainType: chest pain type [TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic]</p></li>
+<li><p>RestingBP: resting blood pressure [mm Hg]</p></li>
+<li><p>Cholesterol: serum cholesterol [mm/dl]</p></li>
+<li><p>FastingBS: fasting blood sugar [1: if FastingBS &gt; 120 mg/dl, 0: otherwise]</p></li>
+<li><p>RestingECG: resting electrocardiogram results [Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of &gt; 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes’ criteria]</p></li>
+<li><p>MaxHR: maximum heart rate achieved [Numeric value between 60 and 202]</p></li>
+<li><p>ExerciseAngina: exercise-induced angina [Y: Yes, N: No]</p></li>
+<li><p>Oldpeak: oldpeak = ST [Numeric value measured in depression]</p></li>
+<li><p>ST_Slope: the slope of the peak exercise ST segment [Up: upsloping, Flat: flat, Down: downsloping]</p></li>
+</ol>
 </div>
 <div id="descriptive-data-analysisstatistics" class="section level2" number="0.2">
 <h2><span class="header-section-number">0.2</span> Descriptive data analysis/statistics</h2>
@@ -406,7 +421,7 @@ test &lt;- heart[-train_ind, ]</code></pre>
 ##                         
 ##                         
 ## </code></pre>
-<p>We find that the data set contains 918 rows and and 12 columns. The twelve columns are: <strong>Age, Sex, ChestPainType, RestingBP, Cholesterol, FastingBS, RestingECG, MaxHR, ExerciseAngina, Oldpeak, ST_Slope</strong> and <strong>HeartDisease</strong>. ##Tror dette egentlig burde i introduction delen##. From the output of <strong>summary</strong> one can see the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of <strong>Sex</strong> on the target variable. The same goes for <strong>Age</strong> as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77.</p>
+<p>We find that the data set contains 918 rows and and 12 columns. The twelve columns correspond to the 11 features mentioned in the introduction plus <strong>HeartDisease</strong> indicating whether a person is diagnosed with heart failure or not. From the output of <span class="math inline">\(\texttt{summary()}\)</span> we find the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of <strong>Sex</strong> on the target variable. The same goes for <strong>Age</strong> as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77.</p>
 <p>To get a better view of the data we use the <span class="math inline">\(\texttt{ggpairs()}\)</span> function.</p>
 <pre class="r"><code>ggpairs(heart, mapping = ggplot2::aes(color = HeartDisease), lower = list(continuous = wrap(&quot;points&quot;,
     alpha = 0.3), combo = wrap(&quot;dot_no_facet&quot;, alpha = 0.4))) + theme(axis.text = element_text(size = 5))</code></pre>
