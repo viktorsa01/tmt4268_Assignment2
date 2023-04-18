@@ -33,6 +33,7 @@ library(GGally)
 library(caret)
 library(pROC)
 library(randomForest)
+library(ggplot2)
 ```
 
 <!--  Etc (load all packages needed). -->
@@ -71,10 +72,12 @@ We find that the data set contains 918 rows and and 12 columns. The twelve colum
 To get a better view of the data we use the $\texttt{ggpairs()}$ function.
 
 ```{r, fig.cap= "pairplot"}
-ggpairs(heart)
+cor(heart)
+ggpairs(heart, mapping = ggplot2::aes(color = HeartDisease),
+  lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.4))) + theme(axis.text = element_text(size = 5))
 ```
 
-From **figure 1** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of $- 0.382$ which is indicates a moderate negative correlation between the two variables.
+From **figure 1** we can see the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of $- 0.382$ which is indicates a moderate negative correlation between the two variables.
 
 ## Methods
 
