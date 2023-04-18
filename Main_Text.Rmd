@@ -71,16 +71,18 @@ We find that the data set contains 918 rows and and 12 columns. The twelve colum
 
 To get a better view of the data we use the $\texttt{ggpairs()}$ function.
 
+
 ```{r, fig.cap= "pairplot"}
 ggpairs(heart, mapping = ggplot2::aes(color = HeartDisease),
   lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.4))) + theme(axis.text = element_text(size = 5))
 ```
 
+<<<<<<< HEAD
 From **figure 1** we can see the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of $- 0.382$ which is indicates a moderate negative correlation between the two variables.
 
 ## Methods
 
-The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used **mainly** for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease.
+The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used mainly for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease.
 
 The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it is the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease correctly classified, while specificity is the portion of healthy people correctly classified. We will emphasize sensitivity, as false negatives will have larger consequences than false positives when trying to detect heart disease. This means we might trade some general performance, for increased sensitivity.
 
@@ -110,6 +112,7 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
 ```
 
 We get a misclassification error of $0.1413$, sensitivity of $0.8899$ and specificity $0.8235$. As a rule of thumb the sum of specificity and sensitivity should be at least $1.5$, which means our model is performing quite well, though we might want to increase the sensitivity of the model. To get a better idea of what cutoff to chose we plot the ROC curve.
+
 
 ```{r, fig.cap= "ROC curve -- Logistic Regression"}
 logRegROC=roc(test$HeartDisease, logRegPrediction)
@@ -154,6 +157,7 @@ We find that the model has a accuracy of of 0.8 **(something)**. Now we tune the
 First we investigate the number of trees in the forest. The number of trees is not a tuning parameter, it is just a question of whether we have enough trees for optimal classification, and of course we want as few trees as possible within this range to keep the complexity down. We plot the error rates for the positive, negative and Out-of-bag observations as functions of number of trees:
 
 ```{r, fig.cap= "Error rates vs number of trees"}
+
 plot(model$err.rate[,1], type="l", ylim = c(0.08, 0.22), ylab="Error rates", xlab = "Number of trees", col="blue")
 lines(model$err.rate[,2], col="red")
 lines(model$err.rate[,3], col="green")
@@ -164,6 +168,7 @@ The most interesting error is the OOB error, since this is the error rate measur
 
 Furthermore, we investigate the number of variables considered in each split in the trees. The default value in the $\texttt{randomForest()}$ function for classification problems corresponds to the floored square root of the number of predictors, in our case 3. The number of predictors considered can be seen as a tuning parameter, since we on one hand want to decorrelate the trees by allowing only a subset of the predictors to be considered, while we on the other hand need enough predictors to split the data properly and avoid bias. To find the optimal value, we test all possible number of predictors, i.e. 1 through 11. In each iteration, we store the OOB error rate at the final iteration.
 
+<<<<<<< HEAD
 ```{r, fig.cap="OOB error vs number of predictors" }
 oobValues = vector(length=11)
 for(i in 1:11) {
