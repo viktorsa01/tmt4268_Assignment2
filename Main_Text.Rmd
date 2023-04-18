@@ -33,6 +33,7 @@ library(GGally)
 library(caret)
 library(pROC)
 library(randomForest)
+library(ggplot2)
 ```
 
 <!--  Etc (load all packages needed). -->
@@ -83,7 +84,7 @@ The classification methods we will be using are logistic regression, random fore
 
 The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it is the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease correctly classified, while specificity is the portion of healthy people correctly classified. We will emphasize sensitivity, as false negatives will have larger consequences than false positives when trying to detect heart disease. This means we might trade some general performance, for increased sensitivity.
 
-Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$ Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$ The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$ This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be \***TRUE**. The cutoff value will be tuned to optimize the model.
+Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$ Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$ The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$ This is done automatically by the $\texttt{glm()}$ function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model.
 
 From the logistic regression model we have that: $$\frac{p_i}{1-p_i} = e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}$$ $\frac{p_i}{1-p_i}$ is known as odds, and represents the ratio of a person getting heart disease and not getting heart disease. From the formula we can see that increasing $x_i$ by $1$, increases the odds by $e^{\beta_i}$. Therefore we get a picture of the impact of each variable on the response by looking coefficients, taking into account the scale of the corresponding variables.
 
@@ -110,15 +111,15 @@ logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassifi
 
 We get a misclassification error of $0.1413$, sensitivity of $0.8899$ and specificity $0.8235$. As a rule of thumb the sum of specificity and sensitivity should be at least $1.5$, which means our model is performing quite well, though we might want to increase the sensitivity of the model. To get a better idea of what cutoff to chose we plot the ROC curve.
 
-```{r}
+```{r, fig.cap="ROC curve -- Logistic Regression"}
 logRegROC=roc(test$HeartDisease, logRegPrediction)
-plot(logRegROC,main="ROC curve -- Logistic Regression")
+plot(logRegROC)
 ```
 
 From the ROC curve we find that $0.5$ seems to work well as a cutoff, but we might be able to increase the sensitivity without drastically decreasing performance. Therefore we try a cutoff of $0.3$.
 
 ```{r}
-logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) #0.2 gir sens: 
+logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) 
 logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
                                          reference=as.factor(test$HeartDisease), 
                                          positive = '1')
@@ -148,11 +149,11 @@ confusionMatrix <- confusionMatrix(data = prediction, reference = test$HeartDise
 confusionMatrix$overall
 ```
 
-We find that the model has a accuracy of of 0.8 **(something)**. Now we fiddle with the parameters of the model to see if it yields a better model.
+We find that the model has a accuracy of of 0.8 **(something)**. Now we tune the parameters of the model to see if it yields a better result.
 
 First we investigate the number of trees in the forest. The number of trees is not a tuning parameter, it is just a question of whether we have enough trees for optimal classification, and of course we want as few trees as possible within this range to keep the complexity down. We plot the error rates for the positive, negative and Out-of-bag observations as functions of number of trees:
 
-```{r}
+```{r, fig.cap = "Error rates vs number of trees"}
 plot(model$err.rate[,1], type="l", ylim = c(0.08, 0.22), ylab="Error rates", xlab = "Number of trees", col="blue")
 lines(model$err.rate[,2], col="red")
 lines(model$err.rate[,3], col="green")
@@ -163,7 +164,7 @@ The most interesting error is the OOB error, since this is the error rate measur
 
 Furthermore, we investigate the number of variables considered in each split in the trees. The default value in the $\texttt{randomForest()}$ function for classification problems corresponds to the floored square root of the number of predictors, in our case 3. The number of predictors considered can be seen as a tuning parameter, since we on one hand want to decorrelate the trees by allowing only a subset of the predictors to be considered, while we on the other hand need enough predictors to split the data properly and avoid bias. To find the optimal value, we test all possible number of predictors, i.e. 1 through 11. In each iteration, we store the OOB error rate at the final iteration.
 
-```{r}
+```{r, fig.cap= "OOB error vs number of predictors"}
 oobValues = vector(length=11)
 for(i in 1:11) {
   newModel <- randomForest(HeartDisease ~ ., data = train, mtry=i, proximity = TRUE)
@@ -172,7 +173,7 @@ for(i in 1:11) {
 plot(oobValues, type = "o", xlab="Number of predictors considered", ylab="OOB error")
 ```
 
-Observing the plot, the OOB error does vary depending on the number of predictors that are considered in each tree split. However, running the experiment multiple times shows that there is no unique optimal value, since the optimal value changes every iteration. It does seem like the model does not require many predictors to keep the OOB error down, which may be an indicator that the predictors are correlated and it is sufficent to only consider a few of them to split the data properly.
+Observing the plot, the OOB error does vary depending on the number of predictors that are considered in each tree split. However, running the experiment multiple times shows that there is no unique optimal value, since the optimal value changes every iteration. It does seem like the model does not require many predictors to keep the OOB error down, which may be an indicator that the predictors are correlated and it is sufficient to only consider a few of them to split the data properly.
 
 We create a new model with adjusted hyperparameters. We use $\texttt{ntree}=100$ and $\texttt{mtry}=2$.
 
