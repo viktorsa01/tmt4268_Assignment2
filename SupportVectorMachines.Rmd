@@ -1,22 +1,24 @@
----
-title: "Max_SVM_assignment2"
-author: "Max Mo Jynge"
-date: "2023-04-15"
-output: html_document
----
+# Support Vector Machines
 
-# Assignment 2: Support Vector Machines (SVM)
+The Support Vector Machine (SVM) is a supervised learning algorithm that separates data points into different classes based on a decision boundary. The decision boundary separates the data points using a set of given predictor variables and a categorical response variable. Points that lie on one side of the boundary are classified into one category, while points that lie on the other side are categorized into another.
 
-In order to understand how the **support vector machine** works, we must first understand how the simpler **support vector classifier** works - because the support vector machine relies on the support vector classifier in order for it to form its decision boundary. Lets look at a simple example using a support vector classifier:
+The decision boundary is optimized with respect to the margin, which is the distance between the decision boundary and the closest data points from each separate class. The data points that lie the closest to the decision boundary (which are the ones that contribute to making the decision boundary) are called the support vectors. The number of support vectors may vary depending on the hyperparameter C, normally referred to as the "cost". Essentially what the cost hyperparameter does is control the bias-variance trade-off of the specific model fit. A high cost leads to a narrower margin and potentially overfitting (low bias, high variance), and a low cost results in a wider margin and potentially underfitting (high bias, low variance).
 
-## Support vector classifiers:
+The decision boundary can either be linear or nonlinear, and the shape of the model depends on the choice of the so-called kernel. The choice of kernel, in combination with values for the hyperparameters, results in a specific SVM model fit, and can be tuned using cross-validation.
+
+In the following analysis we will discuss **1)** how the choice of model affects the predictive ability of our model and **2)** how the choice of hyper-parameters (e.g. cost, gamma) affects the classifications rate.
+
+## Implementation
+
+First, we begin by loading the appropriate libraries and formatting the dataset properly.
 
 ```{r}
-rm(list = ls())
+rm(list=ls())
 library(ggplot2)
 library(GGally)
 library(e1071)
 library(Hmisc)
+library(ROCR)
 
 heart = read.csv("heart.csv")
 heart[, sapply(heart, is.character)] <- lapply(heart[, sapply(heart, is.character)], factor)
@@ -32,14 +34,11 @@ heart$FastingBS = as.factor(heart$FastingBS)
 heart$Cholesterol[heart$Cholesterol == 0] = NA
 heart$Cholesterol = impute(heart$Cholesterol, median)
 
-
 dim(heart)
-names(heart)
 #View(heart)
-str(heart)
+summary(heart[, 1:7])
+summary(heart[, 8:12])
 ```
-
-Let's first look at an example with a single covariate and a single response, namely HeartDisease against Age.
 
 ```{r}
 set.seed(25)
@@ -49,264 +48,131 @@ heart.test  = heart[test, ]
 ```
 
 ```{r}
-plot(heart.train$Age, heart.train$Cholesterol, col=heart.train$HeartDisease)
+plot(heart.train$Age, heart.train$MaxHR, col=heart.train$HeartDisease)
 ```
 
 ```{r}
-tune.out = tune(svm, HeartDisease ~ ., data = heart.train, 
-                kernel = "radial", 
-                ranges = list(cost = c(0.1, 1, 10), gamma = c(0.5, 1, 2)
+tune.optimal.linear = tune(svm, HeartDisease ~ ., data = heart.train, 
+                kernel = "linear", 
+                ranges = list(cost = c(0.1, 1, 5, 10)
               ))
-summary(tune.out)
+summary(tune.optimal.linear)
+tune.optimal.radial = tune(svm, HeartDisease ~ ., data = heart.train, 
+                kernel = "radial", 
+                ranges = list(cost = c(0.1, 1, 5, 10), gamma = c(0.5, 1, 2, 10)
+              ))
+summary(tune.optimal.radial)
+```
+
+From tuning on the set of given hyperparameters, the optimal cost for the linear kernel is $0.1$ and the optimal cost and gamma for the radial kernel is 1 and 0.5, respectively.
+
+```{r}
+rocplot = function(pred, truth, ...) {
+  predob = prediction(pred, truth)
+  perf = performance(predob, "tpr", "fpr")
+  plot(perf, ...)
+}
 ```
 
 ```{r}
-svmfit = function(formula_svm, formula_plot, data.train, data.test, kernel, cost, gamma) {
+svmfit = function(formula_svm, formula_plot, data.train, data.test, kernel, cost, gamma, plot) {
   svmfit = svm(formula = formula_svm, 
              data = data.train, 
              kernel = kernel,
              gamma = gamma,
              cost = cost,
-             scale=TRUE)
-  plot(svmfit, heart.train, formula_plot)
+             scale=TRUE,
+             decision.values = TRUE)
+  
+  if (plot) {
+    plot(svmfit, heart.train, formula_plot)
+  }
   
   heart.pred = predict(svmfit, heart.test)
   table_data = table(predict = heart.pred, truth = data.test$HeartDisease)
+  
+  hyperparameters = sprintf("Cost: %.2f, gamma: %.2f ", cost, gamma)
+  print(hyperparameters)
   print(table_data)
   
   sensitivity = table_data[1] / (table_data[1] + table_data[2])
   sens = sprintf("Sensitivity: %.2f", sensitivity); print(sens)
   specificity = table_data[4] / (table_data[4] + table_data[3])
   spec = sprintf("Specificity: %.2f", specificity); print(spec)
+
+  return(svmfit)
 }
 
-svmfit(HeartDisease ~ ., MaxHR ~ , heart.train, heart.test, "radial", 1, 0.5)
+
+svmfit.linear.optimal = svmfit(HeartDisease ~ ., Cholesterol ~ Age, heart.train, heart.test, "linear", 1, 0.5, FALSE)
+
+svmfit.linear.flexible = svmfit(HeartDisease ~ ., Cholesterol ~ Age, heart.train, heart.test, "linear", 100, 0.5, FALSE)
+
+svmfit.radial.optimal = svmfit(HeartDisease ~ ., MaxHR ~ Age, heart.train, heart.test, "radial", 1, 0.5, FALSE)
+
+svmfit.radial.flexible = svmfit(HeartDisease ~ ., MaxHR ~ Age, heart.train, heart.test, "radial", 1000, 0.2, FALSE)
 ```
 
-Qualitatively the results for both radial and linear kernel seem similar. Hence, we need a quantitative approach in order to determine which kernel works the best.
+Qualitatively the results for both radial and linear kernel seem similar. Hence, we need a quantitative approach in order to determine which kernel works better.
 
-## Support vector classifiers:
+## ROC-curves:
 
-```{r}
-set.seed(1)
-x = matrix(rnorm(20 * 2), ncol = 2)
-y = c(rep(-1, 10), rep(1, 10))
-x[y==1, ] = x[y==1, ] +1
-plot(x, col= (3-y))
-```
+ROC curves (receiver operating characteristic curves), illustrate the relationship between the true positive rate (TPR) and false positive rate (FPR) for a binary classifier. In the context of the **Health** dataset we are using, the TPR represents the rate at which the model is able to correctly predict patients with heart disease, while the FPR represents the rate at which the model incorrectly predicts patients without heart disease, as having the disease. By plotting the TPR against the FPR at different classification thresholds, we can evaluate the performance of the classifier and choose the optimal threshold based on our priorities and the relative costs of errors in different contexts. The area under the ROC curve (normally referred to as the AUC, area under the curve) provides a single numerical measure of the classifier's performance, with higher values indicating better performance. Larger is better.
+
+### ROC for training data:
 
 ```{r}
-library(e1071)
-dat = data.frame(x=x, y = as.factor(y))
-svmfit = svm(y ~ ., data = dat, kernel="linear", cost=10, scale=FALSE)
-plot(svmfit, dat)
-```
-
-Support vectors are plotted as crosses. The remaining points as circles. We can find what vectors are support vectors using \$index.
-
-```{r}
-svmfit$index
-length(svmfit$index)
-```
-
-```{r}
-summary(svmfit)
-```
-
-```{r}
-svmfit = svm(y ~ ., data = dat, kernel="linear", cost=0.1, scale=FALSE)
-plot(svmfit, dat)
-```
-
-```{r}
-svmfit$index
-length(svmfit$index)
-```
-
-```{r}
-set.seed(1)
-
-tune.out = tune(svm, y ~ ., data=dat, kernel="linear", 
-                ranges = list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 100)))
-
-summary(tune.out)
-
-```
-
-```{r}
-bestmod = tune.out$best.model # Get the model with the best cost-value. 
-summary(bestmod)
-```
-
-```{r}
-xtest = matrix(rnorm(20*2), ncol=2)
-ytest = sample(c(-1, 1), 20, replace =TRUE)
-xtest[ytest == 1, ] = xtest[ytest == 1, ] + 1
-testdat = data.frame(x=xtest, y=as.factor(ytest))
-
-
-ypred = predict(bestmod, testdat)
-table(predict = ypred, truth = testdat$y)
-```
-
-Thus, for cost= 0.1 (which is the best model) yields a classification rate of 17 correct and 3 wrong. What if we instead used cost = 0.01?
-
-```{r}
-# trained model using training data. 
-svmfit = svm(y ~ ., data = dat, kernel="linear", cost = 0.01, scale=FALSE) 
-
-# predictions: 
-ypred = predict(svmfit, testdat)
-
-table(predict = ypred, truth = testdat$y)
-```
-
-Now we see that two more observations are classified.
-
-```{r}
-x[y==1, ] = x[y==1, ] + 0.5
-plot(x, col= (y+5)/2, pch = 19)
-```
-
-```{r}
-dat = data.frame(x=x, y = as.factor(y))
-svmfit_large = svm(y ~ ., data = dat, kernel="linear", cost=1e10)
-svmfit_small = svm(y ~ ., data = dat, kernel="linear", cost=1)
-summary(svmfit_large)
-```
-
-```{r}
-plot(svmfit_large, dat)
-plot(svmfit_small, dat)
-```
-
-```{r}
-svmfit_large$index
-svmfit_small$index
-```
-
-So, in summary, the cost parameter controls the trade-off between maximizing the **margin** and minimizing the **classification error**.
-
--   Large cost =\> Lower misclassification rate , but smaller margin.
-
--   Low cost =\> Higher misclassification rate, but greater margin.
-
-## Support vector machines:
-
-```{r}
-set.seed(1)
-x = matrix(rnorm(200*2), ncol=2)
-x[1:100, ] = x[1:100, ] + 2
-x[101:150, ] = x[101:150,] - 2
-y = c(rep(1, 150), rep(2, 50))
-dat = data.frame(x = x, y = as.factor(y))
-
-plot(x, col=y)
-```
-
-Notice that we only use svm() with the data = dat[train, ]. This is because we only fit our model with training data, and then later test the model and fit with the remaining test-data.
-
-```{r}
-train = sample(200, 100) # 100 data points (second argument) are training points. 
-svmfit = svm(y ~ ., data = dat[train, ], kernel="radial", gamma = 1, cost = 1)
-plot(svmfit, dat[train, ])
-```
-
-```{r}
-summary(svmfit)
-```
-
-Now, let's try a fit with higher cost (so that we can have a lower training misclassification).
-
-```{r}
-svmfit = svm(y ~ ., data = dat[train, ], kernel = "radial", gamma = 1, cost = 1e5)
-plot(svmfit, dat[train, ])
-```
-
-As with the radial kernel, we see that for a higher cost, the misclassification rate is lowered. As a consequence, the margin is smaller.
-
-But what is the best cost?? Let's do cross validation!
-
-```{r}
-set.seed(1)
-tune.out = tune(svm, y ~ ., data = dat[train, ],
-                kernel = "radial", 
-                ranges = list(cost = c(0.1, 1, 10, 100, 1000), 
-                              gamma = c(0.5, 1, 2, 3, 4)
-                      )
-                )
-
-summary(tune.out)
-```
-
-```{r}
-table(
-  true = dat[-train, "y"],
-  pred = predict(tune.out$best.model, newdata = dat[-train, ])
-)
-
-```
-
-## ROC Curves:
-
-```{r}
-library(ROCR)
-rocplot = function(pred, truth, ...) {
-  predob = prediction(pred, truth)
-  perf = performance(predob, "tpr", "fpr")
-  plot(perf, ...)
-}
-
-svmfit.opt = svm(y ~ ., data = dat[train, ], 
-                 kernel = "radial", 
-                 gamma = 2, 
-                 cost = 1, 
-                 decision.values = TRUE)
-
-fitted = attributes(
-  predict(svmfit.opt, dat[train, ], decision.values = TRUE)
+fitted.linear.optimal = attributes(
+  predict(svmfit.linear.optimal, heart.train, decision.values = TRUE)
 )$decision.values
-```
 
-```{r}
-rocplot(-fitted, dat[train, "y"], main = "Training Data")
-
-
-svmfit.flex = svm(y ~ ., data = dat[train, ], 
-                  kernel = "radial", 
-                  gamma = 50, 
-                  cost = 1, 
-                  decision.values = TRUE)
-fitted = attributes(
-  predict(svmfit.flex, dat[train, ], decision.values = TRUE)
+fitted.linear.flexible = attributes(
+  predict(svmfit.linear.flexible, heart.train, decision.values = TRUE)
 )$decision.values
-rocplot(-fitted, dat[train, "y"], add = TRUE, col="red")
-```
 
-```{r}
-fitted = attributes(
-  predict(svmfit.opt, dat[-train, ], decision.values = TRUE)
+fitted.radial.optimal = attributes(
+  predict(svmfit.radial.optimal, heart.train, decision.values = TRUE)
 )$decision.values
-rocplot(-fitted, dat[-train, "y"], main = "Test Data")
-fitted = attributes(
-  predict(svmfit.flex, dat[-train, ], decision.values = TRUE)
+
+fitted.radial.flexible = attributes(
+  predict(svmfit.radial.flexible, heart.train, decision.values = TRUE)
 )$decision.values
-rocplot(-fitted, dat[-train, "y"], add = TRUE, col = "red")
+
+rocplot(-fitted.linear.optimal, heart[train, "HeartDisease"], main = "Training Data", col="black")
+rocplot(-fitted.linear.flexible, heart[train, "HeartDisease"], add = TRUE, col="red")
+rocplot(-fitted.radial.optimal, heart[train, "HeartDisease"], add=TRUE, col="blue")
+rocplot(-fitted.radial.flexible, heart[train, "HeartDisease"], add = TRUE, col="green")
 ```
 
-## SVM with multiple classes:
+In the above plot we see the ROC-curve for two different models with respectively two different model fits (blue, green for radial kernel, black, red for linear kernel) . The ROC curves for the radial kernel seem to score extraordinarily well with the training set, and there are a few reasons for why this may be. The radial kernel would have lower bias towards non-linear relationships between covariates. This may lead to overfitting the training data and result in higher accuracy on the training set compared to the linear kernel. However, this may come at the expense of generalization performance on new, unseen data, as the model may have learned false patterns in the training set that really do not apply for the population.
+
+It's important to note that the ROC curve is a diagnostic tool for evaluating the performance of a binary classifier and does not provide insight into the underlying causes of differences in performance between different models or kernel functions. Next, we illustrate this by applying the model on the test set.
+
+### ROC for test data:
+
+The ROC curves for the test data provide a more reliable assessment of the model's ability to accurately classify new, unseen data, and can help guide model selection and hyperparameter tuning.
 
 ```{r}
-set.seed(1)
-x = rbind(x, matrix(rnorm(50*2), ncol=2))
-y = c(y, rep(0, 50))
-x[y == 0, 2] = x[y == 0, 2] + 2
-dat = data.frame(x = x, y = as.factor(y))
-par(mfrow = c(1, 1))
-plot(x, col = (y+1))
+fitted.linear.optimal = attributes(
+  predict(svmfit.linear.optimal, heart.test, decision.values = TRUE)
+)$decision.values
+
+fitted.linear.flexible = attributes(
+  predict(svmfit.linear.flexible, heart.test, decision.values = TRUE)
+)$decision.values
+
+fitted.radial.optimal = attributes(
+  predict(svmfit.radial.optimal, heart.test, decision.values = TRUE)
+)$decision.values
+
+fitted.radial.flexible = attributes(
+  predict(svmfit.radial.flexible, heart.test, decision.values = TRUE)
+)$decision.values
+
+rocplot(-fitted.linear.optimal, heart[test, "HeartDisease"], main="Test Data", col="black")
+rocplot(-fitted.linear.flexible, heart[test, "HeartDisease"], add = TRUE, col = "red")
+rocplot(-fitted.radial.optimal, heart[test, "HeartDisease"], add=TRUE, col="blue")
+rocplot(-fitted.radial.flexible, heart[test, "HeartDisease"], add = TRUE, col = "green")
 ```
 
-```{r}
-svmfit = svm(y ~ ., data = dat, kernel = "radial", cost = 10, gamma = 1)
-plot(svmfit, dat)
-```
+As we expected, the apparently outstanding results obtained by the radial kernels on the training set did not hold up nearly as well on the test set. Most noticeable is the green line (flexible radial kernel) that performed the best on the training set, but now performs the worst on the test set. This is a phenomenon is known as overfitting, and we see that the model has been fit too closely to the specific patterns in the training data and fails to generalize well on new, unseen data. In contrast the more conservative models have generalized well and indeed do
