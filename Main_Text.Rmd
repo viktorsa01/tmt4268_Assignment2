@@ -32,17 +32,45 @@ library("rmarkdown")
 library(GGally)
 library(caret)
 library(pROC)
+library(randomForest)
+library(ggplot2)
 ```
 
 <!--  Etc (load all packages needed). -->
 
 ## Introduction: Scope and purpose of your project
 
+Cardiovascular disease is the leading cause of death globally, four out of five of which are due to heart failure. Early detection and management is crucial to reduce mortality(2021, fedesoriano). Therefore we want to apply statistical methods to try and make a classification model for predicting heart failure. In addition we would like to gain insight into which factors might indicate a higher risk of heart disease.
 
+We will be using **Heart Failure Prediction Dataset**(2021) by *fedesoriano*. The data set was made by combining five different heart disease data sets, looking at 11 common features. The 11 features of the data set, which we will be using to make our model are: 
+
+1. Age: age of the patient [years]
+
+2. Sex: sex of the patient [M: Male, F: Female]
+
+3. ChestPainType: chest pain type [TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic]
+
+4. RestingBP: resting blood pressure [mm Hg]
+
+5. Cholesterol: serum cholesterol [mm/dl]
+
+6. FastingBS: fasting blood sugar [1: if FastingBS > 120 mg/dl, 0: otherwise]
+
+7. RestingECG: resting electrocardiogram results [Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes' criteria]
+
+8. MaxHR: maximum heart rate achieved [Numeric value between 60 and 202]
+
+9. ExerciseAngina: exercise-induced angina [Y: Yes, N: No]
+
+10. Oldpeak: oldpeak = ST [Numeric value measured in depression]
+
+11. ST_Slope: the slope of the peak exercise ST segment [Up: upsloping, Flat: flat, Down: downsloping]
+
+**Trenger kanskje ikke hele denne tabelen hvis vi får lite plass. Eventuelt kan vi bare nevne alle variabel navnene inline i deskriptiv analyse delen der det står: 11 features mentioned in the introduction, og fjerne tabellen her **
 
 ## Descriptive data analysis/statistics
 
-We start by loading the data set, and changing the data type of all categorical variables to factor variables so that r knows the right encoding. Then we divide the data into a training and a test set, by a 80/20 split. 
+We start by loading the data set, and changing the data type of all categorical variables to factor variables so that r knows the right encoding. Then we divide the data into a training and a test set, by a 80/20 split.
 
 ```{r}
 heart <- read.csv("heart.csv")
@@ -54,10 +82,10 @@ heart$ExerciseAngina <- factor(heart$ExerciseAngina)
 heart$ST_Slope <- factor(heart$ST_Slope)
 heart$HeartDisease <- factor(heart$HeartDisease)
 
-training_set_size <- floor(0.8 * nrow(d.heart))
-train_ind <- sample(seq_len(nrow(d.heart)), size = training_set_size)
-train <- d.heart[train_ind, ]
-test <- d.heart[-train_ind, ]
+training_set_size <- floor(0.8 * nrow(heart))
+train_ind <- sample(seq_len(nrow(heart)), size = training_set_size)
+train <- heart[train_ind, ]
+test <- heart[-train_ind, ]
 ```
 
 Then we run the **dim** and **summary** functions to get a quick overview of the data.
@@ -67,25 +95,141 @@ dim (heart)
 summary(heart)
 ```
 
-We find that the data set contains 918 rows and and 12 columns. The twelve columns are: **Age, Sex, ChestPainType, RestingBP, Cholesterol, FastingBS, RestingECG, MaxHR, ExerciseAngina, Oldpeak, ST_Slope** and **HeartDisease**. ##Tror dette egentlig burde i introduction delen##. From the output of **summary** one can see the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of **Sex** on the target variable. The same goes for **Age** as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77. 
- 
-To get a better view of the data we use the **ggpairs** function. 
+We find that the data set contains 918 rows and and 12 columns. The twelve columns correspond to the 11 features mentioned in the introduction plus **HeartDisease** indicating whether a person is diagnosed with heart failure or not. From the output of $\texttt{summary()}$ we find the min, max, mean and median for all numerical variables and the distribution of the categorical variables. We notice that the data set contains significantly fewer women than men, which might skew the effect of **Sex** on the target variable. The same goes for **Age** as over half the people are between 45 and 60 years, which is about 25 % of the total age range of 28 to 77.
+
+To get a better view of the data we use the $\texttt{ggpairs()}$ function.
 
 ```{r, fig.cap= "pairplot"}
-ggpairs(heart)
+ggpairs(heart, mapping = ggplot2::aes(color = HeartDisease), lower = list(continuous = wrap("points",
+    alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.4))) + theme(axis.text = element_text(size = 5))
 ```
-From **figure XXX** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of - 0.382 which is indicates a moderate negative correlation between the two variables. 
+
+From **figure 1** we can se the distribution of all the variables, and we can see them plotted against each other. We also see the correlation between the numerical covariates, and notice that none of them seem to be highly correlated. **MaxHR** and **Age** have the largest value of $-0.382$ which is indicates a moderate negative correlation between the two variables.
 
 ## Methods
 
-The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used **mainly/only** for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease. 
+The classification methods we will be using are logistic regression, random forest and support vector machines. Logistic regression will be used for both prediction and inference, while random forest and support vector machines will be used mainly for prediction. We want to find out which model performs best, while also gaining insight into factors that indicate a higher risk of heart disease.
 
-The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it is the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease correctly classified, while specificity is the portion of healthy people correctly classified. We will emphasize sensitivity, as false negatives will have larger consequences than false positives when trying to detect heart disease. This means we might trade some general performance, for increased sensitivity.   
+The models will be evaluated by misclassification error, while also taking into account the sensitivity and specificity. Misclassification error is calculated by $\frac{incorrect predictions}{total predictions}$, meaning it is the portion of misclassified predictions and is therefore a clear indicator of the general performance of the model. Sensitivity in our case is the portion of people with heart disease correctly classified, while specificity is the portion of healthy people correctly classified. We will emphasize sensitivity, as false negatives will have larger consequences than false positives when trying to detect heart disease. This means we might trade some general performance, for increased sensitivity.
 
-Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$
-Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$
-The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$
-This is done automatically by the **glm** function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model. Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can therefore be used for inference. . Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no to average correlation between the independent variables, which shouldn't be an issue as we have seen from the descriptive analysis section. 
+Logistic regression is used for two-category classification problems like the one we are dealing with. We assume that the response variable $\mathbf{Y_i}$ follows a Bernoulli distribution with probability $p_i$, and that there is a linear relationship between the predictor variables $x_1,...,x_i$ and $\mathbf{Y_i}$. We link the predictor variables to the probability by the logistic link function: $$\log{\frac{p_i}{1-p_i}} = \beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}$$ Which is equivalent with: $$p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}{1+e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}}$$ The coefficients $\beta_i$ are found by maximizing: $$L(\boldsymbol{\beta}) =  \prod_{i=1}^n (p_i)^{y_i}(1-p_i)^{1-y_i},$$ This is done automatically by the $\texttt{glm()}$ function in R. Each $p_i$ represents the probability that person $i$ is diagnosed with heart disease. We then chose a cutoff value of when predict **HeartDisease** to be ***TRUE**. The cutoff value will be tuned to optimize the model.
+
+From the logistic regression model we have that: $$\frac{p_i}{1-p_i} = e^{\beta_0 + \beta_1x_{i1} + ... + \beta_nx_{in}}$$ $\frac{p_i}{1-p_i}$ is known as odds, and represents the ratio of a person getting heart disease and not getting heart disease. From the formula we can see that increasing $x_i$ by $1$, increases the odds by $e^{\beta_i}$. Therefore we get a picture of the impact of each variable on the response by looking coefficients, taking into account the scale of the corresponding variables.
+
+Some upsides of logistic regression are that it is very simple to implement, in addition it is relatively easy to interpret and can therefore be used for inference. Downsides are poor performance if the relationship between response and predictors isn't linear and it is often outperformed by other methods for prediction. Logistic regression also requires no or at most average correlation between the independent variables, which shouldn't be an issue as we have seen in the descriptive analysis section.
+
+Random forest is a method that can be used both for classification and regression. It is based on the idea of decision trees, but with some tweaks to obtain better accuracy. One of the main weaknesses of decision trees is high variance. To reduce variance, one can perform a method called *bagging*, which involves drawing multiple bootstrapped training sets from the data at hand, make a decision tree for each set, and then average (regression) or perform a majority vote (classification) to predict the value of an observation. This reduces variance since averaging a set of observations scales the variance by $\frac{1}{\text{# observations}}$. One could stop here, however, the procedure of producing multiple independent models introduces another problem. We recall that in a decision tree, each split is performed by choosing the predictor that best splits the data in two, measured by Gini index or entropy (our models are built using functions from the **randomForest** library, which finds the best split measured by Gini index). If we have few predictors, and some predictors have a relatively large p-value, they are at risk of being ignored in the model, since stronger predictors will be used to split the data inn all or most of the bagged trees. This will lead to a collection of trees where most of them are highly correlated through the strongest predictors. To solve this, instead of considering the full set of predictors at each split, we instead draw a random subset of predictors. This way, we ensure that all predictors will have their say in the prediction performed by the model, and avoid the scenario where one predictor determines the split of the root node in every tree. In total, these two tweaks results in vastly superior models in terms of prediction accuracy compared to normal decision trees. This, however, comes at the cost of interpretability, which is a major strength of simple trees.
+
+In random forests, there are multiple of hyperparameters that can be optimized. We may choose the number of trees, maximum depth of each tree, number of predictors considered at each split, minimum number of observations at the leaves, etc. In this project we have decided to optimize only the number of trees and the number of predictors considered in each tree split.
+
 ## Results and interpretation
+
+#### Logistic regression
+
+After some testing we excluded **RestingECG**, **MaxHR**, **Age**, and **RestingBP** from the analysis due to non-significant p-values when included in a model with all dependent variables. We then fitted the model to the training set and used a $0.5$ classification cutoff to predict the test set, generating a confusion matrix to evaluate performance.
+
+```{r}
+logRegModel <- glm(HeartDisease ~ . - RestingECG - MaxHR - Age - RestingBP, data = train, family = "binomial")
+logRegPrediction <- predict(logRegModel, test, type="response")
+logRegPredictionClassified <- ifelse(logRegPrediction > 0.5, 1, 0)
+logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
+                                         reference=as.factor(test$HeartDisease), 
+                                         positive = '1')
+```
+
+We get a misclassification error of $0.1413$, sensitivity of $0.8899$ and specificity $0.8235$. As a rule of thumb the sum of specificity and sensitivity should be at least $1.5$, which means our model is performing quite well, though we might want to increase the sensitivity of the model. To get a better idea of what cutoff to chose we plot the ROC curve.
+
+```{r, fig.cap="ROC curve -- Logistic Regression"}
+logRegROC=roc(test$HeartDisease, logRegPrediction)
+plot(logRegROC)
+```
+
+From the ROC curve we find that $0.5$ seems to work well as a cutoff, but we might be able to increase the sensitivity without drastically decreasing performance. Therefore we try a cutoff of $0.3$.
+
+```{r}
+logRegPredictionClassified <- ifelse(logRegPrediction > 0.3, 1, 0) 
+logRegConfusionMatrix <- confusionMatrix(data=as.factor(logRegPredictionClassified), 
+                                         reference=as.factor(test$HeartDisease), 
+                                         positive = '1')
+```
+
+We get misclassification error of $0.163$, a sensitivity of $0.939$ and specificity of $0.718$. Which we find to be a better result than the $0.5$ cutoff, due to the increase in sensitivity while slightly increasing the misclassification error. From the ROC curve we find that further increases in sensitivity will give diminishing returns while lowering the general performance.
+
+```{r}
+logRegModel$coefficients
+```
+
+From the coefficients we find that **ST_Slope** and **ChestPainType** have the largest impact on the odds of heart disease. In particular people with a flat slope or asymptomatic chest pains have higher chances of heart disease. Otherwise we find that **SexM, FastingBS, ExerciseAnginaY** and **Oldpeak** all increase the odds, while **Cholesterol** decreases them slightly.
+
+#### Random Forest
+
+We create a random forest model using the $\texttt{randomForest()}$ function from the **randomForest** library:
+
+```{r}
+model <- randomForest(HeartDisease ~ ., data = train, importance = TRUE)
+```
+
+Perform prediction on unseen test data, and assess the prediction through a confusion matrix:
+
+```{r}
+prediction <- predict(model, test)
+confusionMatrix <- confusionMatrix(data = prediction, reference = test$HeartDisease)
+confusionMatrix$overall
+```
+
+We find that the model has a accuracy of of 0.8 **(something)**. Now we tune the parameters of the model to see if it yields a better result.
+
+First we investigate the number of trees in the forest. The number of trees is not a tuning parameter, it is just a question of whether we have enough trees for optimal classification, and of course we want as few trees as possible within this range to keep the complexity down. We plot the error rates for the positive, negative and Out-of-bag observations as functions of number of trees:
+
+```{r, fig.cap = "Error rates vs number of trees"}
+plot(model$err.rate[,1], type="l", ylim = c(0.08, 0.22), ylab="Error rates", xlab = "Number of trees", col="blue")
+lines(model$err.rate[,2], col="red")
+lines(model$err.rate[,3], col="green")
+legend(225, 0.225, legend=c("OOB", "Negatives", "Positives"), col=c("blue", "red", "green"), lty=1, cex=0.8)
+```
+
+The most interesting error is the OOB error, since this is the error rate measured on unseen data, and hence is a valid estimate of the test error. Observing the plot, it seems like all the error rates stabilize at around 100 trees, which means we can reduce complexity by reducing the number of trees from 500 to 100 without any loss of precision in the model.
+
+Furthermore, we investigate the number of variables considered in each split in the trees. The default value in the $\texttt{randomForest()}$ function for classification problems corresponds to the floored square root of the number of predictors, in our case 3. The number of predictors considered can be seen as a tuning parameter, since we on one hand want to decorrelate the trees by allowing only a subset of the predictors to be considered, while we on the other hand need enough predictors to split the data properly and avoid bias. To find the optimal value, we test all possible number of predictors, i.e. 1 through 11. In each iteration, we store the OOB error rate at the final iteration.
+
+```{r, fig.cap= "OOB error vs number of predictors"}
+oobValues = vector(length=11)
+for(i in 1:11) {
+  newModel <- randomForest(HeartDisease ~ ., data = train, mtry=i, proximity = TRUE)
+  oobValues[i] <- newModel$err.rate[nrow(newModel$err.rate), 1]
+}
+plot(oobValues, type = "o", xlab="Number of predictors considered", ylab="OOB error")
+```
+
+Observing the plot, the OOB error does vary depending on the number of predictors that are considered in each tree split. However, running the experiment multiple times shows that there is no unique optimal value, since the optimal value changes every iteration. It does seem like the model does not require many predictors to keep the OOB error down, which may be an indicator that the predictors are correlated and it is sufficient to only consider a few of them to split the data properly.
+
+We create a new model with adjusted hyperparameters. We use $\texttt{ntree}=100$ and $\texttt{mtry}=2$.
+
+```{r}
+adjustedModel <- randomForest(HeartDisease ~ ., data = train, mtry = 2, ntree=100, importance = TRUE)
+
+adjustedPrediction <- predict(adjustedModel, test)
+
+confusionMatrix2 <- confusionMatrix(data = adjustedPrediction, reference = test$HeartDisease)
+confusionMatrix2$overall
+```
+
+The accuracy of the model is 8. **(something)**. Another measure of the quality of the model is the AUC score, which we measure with the $\texttt{roc()}$ function from the **pRoc** library.
+
+```{r}
+probabilityPrediction <- predict(adjustedModel, test, type="prob")
+ROC <- roc(test$HeartDisease, probabilityPrediction[,2])
+ROC$auc
+```
+
+The model yields an AUC score of more than 0.9, which is good in almost all cases.
+
+In addition to creating a predictive model, we want the model to say something about the relation between the response and the different covariates, i.e. inference. We use the $\texttt{varImpPlot()}$ function from the **randomForest** library, which approximates how separate predictors affects the accuracy of the model and the impurity of the root nodes in the trees of the model (measured by the Gini index).
+
+```{r}
+varImpPlot(adjustedModel)
+```
+
+Examining the plots, it seems like the **ST_Slope** and **ChestPainType** variables is most important for creating a good model, indicating that they have a strong correlation with the response variable. This is in agreement with the other logistic regression model.
 
 ## Summary
